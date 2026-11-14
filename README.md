@@ -7,6 +7,7 @@ A finance analyst asks questions in plain English about the 2025 invoices, the v
 - **Evidence sources (the only ones):** `data/invoices_2025_clean.csv`, `data/vendor_master.csv`, `data/procurement_policy.md`, and the ECB euro foreign exchange reference rates for [USD](https://data.ecb.europa.eu/data/datasets/EXR/EXR.D.USD.EUR.SP00.A) and [GBP](https://data.ecb.europa.eu/data/datasets/EXR/EXR.D.GBP.EUR.SP00.A) from the ECB Data Portal
 
 Design and decisions are in [`system_design.md`](system_design.md) (requirements) and [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) (how it was built).
+The descriptions of the final implementation and testing are in ['docs/ARCHITECTURE.md'](docs/ARCHITECTURE.md) (what has been built).
 
 ---
 
@@ -183,3 +184,48 @@ backend/evals/     golden question set, independent reference, runner
 frontend/src/      api client + generated types, state, components (summary, conversation, evidence)
 var/               runtime: fx_cache/, traces/, evals/  (git-ignored)
 ```
+# Write-up
+## What you built and what you left out
+
+Following the plan-and-solve agentic workflow, the backend consists of four agents responsible for making the following decisions
+  - router agent: after receiving the user query, use GPT model (with OPENAI_API_KEY saved in .env) to decide which data source to use
+    1) the global procurement and spend policy specified in procurement_policy.md;
+    2) the invoice and vendor records saved in those two csv file;
+    3) ECB euro reference rates when the data question needs currency conversion; this supplements the CSV evidence rather than replacing it; or 
+		4) if the user query is irrelevant, such as "what is today's weather?", respond the input query cannot be supported by any evidence in the data. 
+      The LLM will only answer questions supported by those three files and the authorized ECB euro reference rates
+  - policy agent: if procurement_policy.md is chosen by the router agent, use the content in procurement_policy.md as context of the GPT model to answer the query and list the supporting evidence. If the query cannot be supported by any clause in procurement_policy.md, respond no evidence can be found to answer the question. Never use GPT's internal knowledge to answer without getting support from the data
+  - query code generation agent: if the invoice and vendor records saved in those two csv file are chosen by the router agent, given the table schema as context, use GPT to convert the user query into pandas query function, and return the query results as well as records supporting the results. When conversion is needed, expose validated application-computed reporting amounts and ECB rate references in the schema.
+  - results explaination agent: Use GPT to provide explanation on the verified results, grounded in the selected local records, policy clauses where relevant, and ECB reference-rate observations. If the user query cannot be successfully converted to pandas query function or the function cannot successfully run (e.g. due to the user's reference to columns not existing in those tables), return the explanation to the user so that the user can update the query accordingly. Missing or invalid rates must produce an explicit limitation or review response rather than guessed rates or an incomplete consolidated answer
+
+The orchestrator will implement the control flow described above. The following principles are followed in the implementation:
+  - LLM decides and explains while application code computs and verifies.
+  - Evidence is a first-class output, not a by-product.
+  - Never present an incomplete figure as complete.
+  - Every outcome is explicit.
+  - Everying is traceable.
+
+I focus on implementing the above agentic workflow because they are most critical in meeting the user requirement of 1) the results should be evidence-based (using available input data to generate results instead of relying on LLM's internal knowledge); 2) the decision trajectory should be traceable. The following features are left out due to time constraint:
+- storing procurement records and policy clauses in databases for efficient query;
+- authentification of different users for access control;
+- optimize LLM response speed to reduce latency;
+- allow user to ask follow-up question based on the answers of previous questions.
+
+## How you'd evaluate it
+I will generate input queries to cover typical use cases and different edge cases. The typical use cases include those queries that can be answered using
+ either procurement records or policy clauses (or both). 
+ The edge cases should cover the following:
+- out-of-scope queries that are not relevant to procurement records or policy (e.g. what is today's weather?);
+- queries related to policy but no support from the given procurement_policy.md
+- queries related to procurement records, but cannot successfully execute because of its using columns not present in the csv files
+
+The expected answers should be generated by human annotation. Specifically, the human should write the query using the input natural language description and save the results as the ground truth.
+
+## What production would need
+To move the prototype into production, the following changes need to be made:
+- Real data: replace the csv files with warehouse table, keep versioning of both procurement records and policy, use SQL instead to scale to large dataset
+- Access control: apply authentication with different user roles (with different role-level scopes)
+- Cost: use the enterprise OpenAI models or open weight models for cost control (compare different models to achieve optimal tradeoff between performance and cost)
+- Audit trail: besides what have been traced in the current implementation (input question, source chosen, prompt, model, query code, verification results), add the user identity,
+  data version to the trace. Also consider the rention policy to decide how long to keep the logged traces.
+- Efficiency: with multiple users using the system at the same time, these multiple jobs needs to be put in a queue. Furthermore, multiple app instances need to be created to meet the load.
