@@ -1,0 +1,1995 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Procurement Q&A Agent",
+  "version": "1.0.0"
+ },
+ "paths": {
+  "/health": {
+   "get": {
+    "summary": "Health",
+    "operationId": "health_health_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/fx/status": {
+   "get": {
+    "summary": "Fx Status",
+    "operationId": "fx_status_fx_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FxStatusResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/fx/refresh": {
+   "post": {
+    "summary": "Fx Refresh",
+    "operationId": "fx_refresh_fx_refresh_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FxStatusResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/summary": {
+   "get": {
+    "summary": "Summary",
+    "description": "Deterministic overview; cached until the active ECB rate snapshots change.",
+    "operationId": "summary_summary_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SummaryResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/ask": {
+   "post": {
+    "summary": "Ask",
+    "description": "Every handled outcome (answered, no evidence, out of scope, LLM down...) is HTTP 200 with a status.\nHTTP 503 means the server is at its concurrency limit and nothing was attempted.",
+    "operationId": "ask_ask_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AskRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AskResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Too many questions are being answered; retry shortly"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/traces/{trace_id}": {
+   "get": {
+    "summary": "Get Trace",
+    "operationId": "get_trace_traces__trace_id__get",
+    "parameters": [
+     {
+      "name": "trace_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Trace Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Get Trace Traces  Trace Id  Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AggregationCheck": {
+    "properties": {
+     "column": {
+      "type": "string",
+      "title": "Column"
+     },
+     "agg": {
+      "type": "string",
+      "title": "Agg"
+     },
+     "source_column": {
+      "type": "string",
+      "title": "Source Column"
+     },
+     "group_by": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Group By"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "verified",
+       "unverified",
+       "unavailable"
+      ],
+      "title": "Status"
+     },
+     "detail": {
+      "type": "string",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "column",
+     "agg",
+     "source_column",
+     "group_by",
+     "status",
+     "detail"
+    ],
+    "title": "AggregationCheck"
+   },
+   "AnswerBlock": {
+    "properties": {
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "key_figures": {
+      "items": {
+       "$ref": "#/components/schemas/KeyFigure"
+      },
+      "type": "array",
+      "title": "Key Figures",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "text"
+    ],
+    "title": "AnswerBlock"
+   },
+   "AskRequest": {
+    "properties": {
+     "question": {
+      "type": "string",
+      "maxLength": 1000,
+      "minLength": 1,
+      "title": "Question"
+     },
+     "reporting_currency": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "EUR",
+         "USD",
+         "GBP"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reporting Currency"
+     }
+    },
+    "type": "object",
+    "required": [
+     "question"
+    ],
+    "title": "AskRequest"
+   },
+   "AskResponse": {
+    "properties": {
+     "trace_id": {
+      "type": "string",
+      "title": "Trace Id"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "ANSWERED",
+       "PARTIAL",
+       "NO_EVIDENCE",
+       "OUT_OF_SCOPE",
+       "QUERY_FAILED",
+       "ERROR"
+      ],
+      "title": "Status"
+     },
+     "question": {
+      "type": "string",
+      "title": "Question"
+     },
+     "route": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RouteInfo"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "answer": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/AnswerBlock"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "evidence": {
+      "$ref": "#/components/schemas/Evidence"
+     },
+     "limitations": {
+      "items": {
+       "$ref": "#/components/schemas/Limitation"
+      },
+      "type": "array",
+      "title": "Limitations",
+      "default": []
+     },
+     "caveats": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Caveats",
+      "default": []
+     },
+     "error": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ErrorInfo"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "required": [
+     "trace_id",
+     "status",
+     "question"
+    ],
+    "title": "AskResponse"
+   },
+   "ComponentStatus": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "unavailable",
+       "not_configured",
+       "error"
+      ],
+      "title": "Status"
+     },
+     "detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status"
+    ],
+    "title": "ComponentStatus"
+   },
+   "Consolidated": {
+    "properties": {
+     "available": {
+      "type": "boolean",
+      "title": "Available"
+     },
+     "currency": {
+      "type": "string",
+      "title": "Currency",
+      "default": "EUR"
+     },
+     "total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total"
+     },
+     "by_currency": {
+      "items": {
+       "$ref": "#/components/schemas/CurrencyConversion"
+      },
+      "type": "array",
+      "title": "By Currency",
+      "default": []
+     },
+     "invoice_count": {
+      "type": "integer",
+      "title": "Invoice Count"
+     },
+     "evidence": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/FxEvidenceSummary"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "unavailable_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unavailable Reason"
+     },
+     "missing": {
+      "items": {
+       "$ref": "#/components/schemas/MissingRate"
+      },
+      "type": "array",
+      "title": "Missing",
+      "default": []
+     },
+     "recommendation": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recommendation"
+     }
+    },
+    "type": "object",
+    "required": [
+     "available",
+     "invoice_count"
+    ],
+    "title": "Consolidated"
+   },
+   "CurrencyConversion": {
+    "properties": {
+     "currency": {
+      "type": "string",
+      "title": "Currency"
+     },
+     "original_amount": {
+      "type": "string",
+      "title": "Original Amount"
+     },
+     "invoice_count": {
+      "type": "integer",
+      "title": "Invoice Count"
+     },
+     "converted_amount": {
+      "type": "string",
+      "title": "Converted Amount"
+     }
+    },
+    "type": "object",
+    "required": [
+     "currency",
+     "original_amount",
+     "invoice_count",
+     "converted_amount"
+    ],
+    "title": "CurrencyConversion"
+   },
+   "CurrencyTotal": {
+    "properties": {
+     "currency": {
+      "type": "string",
+      "title": "Currency"
+     },
+     "amount": {
+      "type": "string",
+      "title": "Amount"
+     },
+     "invoice_count": {
+      "type": "integer",
+      "title": "Invoice Count"
+     },
+     "credit_note_count": {
+      "type": "integer",
+      "title": "Credit Note Count",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "currency",
+     "amount",
+     "invoice_count"
+    ],
+    "title": "CurrencyTotal"
+   },
+   "DataEvidence": {
+    "properties": {
+     "result_description": {
+      "type": "string",
+      "title": "Result Description"
+     },
+     "result_table": {
+      "$ref": "#/components/schemas/ResultTable"
+     },
+     "supporting_rows": {
+      "$ref": "#/components/schemas/SupportingRows"
+     },
+     "original_currency_breakdown": {
+      "items": {
+       "$ref": "#/components/schemas/CurrencyTotal"
+      },
+      "type": "array",
+      "title": "Original Currency Breakdown"
+     },
+     "group_breakdowns": {
+      "items": {
+       "$ref": "#/components/schemas/GroupBreakdown"
+      },
+      "type": "array",
+      "title": "Group Breakdowns",
+      "default": []
+     },
+     "aggregations": {
+      "items": {
+       "$ref": "#/components/schemas/AggregationCheck"
+      },
+      "type": "array",
+      "title": "Aggregations",
+      "default": []
+     },
+     "notes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Notes",
+      "default": []
+     },
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "row_sources": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Row Sources"
+     }
+    },
+    "type": "object",
+    "required": [
+     "result_description",
+     "result_table",
+     "supporting_rows",
+     "original_currency_breakdown",
+     "code",
+     "row_sources"
+    ],
+    "title": "DataEvidence"
+   },
+   "DataHealth": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "unavailable",
+       "not_configured",
+       "error"
+      ],
+      "title": "Status"
+     },
+     "detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Detail"
+     },
+     "invoice_count": {
+      "type": "integer",
+      "title": "Invoice Count",
+      "default": 0
+     },
+     "vendor_count": {
+      "type": "integer",
+      "title": "Vendor Count",
+      "default": 0
+     },
+     "date_range": {
+      "anyOf": [
+       {
+        "prefixItems": [
+         {
+          "type": "string",
+          "format": "date"
+         },
+         {
+          "type": "string",
+          "format": "date"
+         }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Date Range"
+     },
+     "file_sha256": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "File Sha256",
+      "default": {}
+     }
+    },
+    "type": "object",
+    "required": [
+     "status"
+    ],
+    "title": "DataHealth"
+   },
+   "DataQualityItem": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     },
+     "count": {
+      "type": "integer",
+      "title": "Count"
+     },
+     "invoice_numbers": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Invoice Numbers"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "message",
+     "count",
+     "invoice_numbers"
+    ],
+    "title": "DataQualityItem"
+   },
+   "DatasetInfo": {
+    "properties": {
+     "invoice_count": {
+      "type": "integer",
+      "title": "Invoice Count"
+     },
+     "vendor_count": {
+      "type": "integer",
+      "title": "Vendor Count"
+     },
+     "date_range": {
+      "prefixItems": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "string",
+        "format": "date"
+       }
+      ],
+      "type": "array",
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Date Range"
+     },
+     "file_sha256": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "File Sha256"
+     },
+     "policy_document": {
+      "type": "string",
+      "title": "Policy Document"
+     }
+    },
+    "type": "object",
+    "required": [
+     "invoice_count",
+     "vendor_count",
+     "date_range",
+     "file_sha256",
+     "policy_document"
+    ],
+    "title": "DatasetInfo"
+   },
+   "ErrorInfo": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "message"
+    ],
+    "title": "ErrorInfo"
+   },
+   "Evidence": {
+    "properties": {
+     "policy": {
+      "items": {
+       "$ref": "#/components/schemas/PolicyEvidence"
+      },
+      "type": "array",
+      "title": "Policy",
+      "default": []
+     },
+     "data": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/DataEvidence"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "fx": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/FxEvidenceBlock"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "type": "object",
+    "title": "Evidence"
+   },
+   "FxCoverage": {
+    "properties": {
+     "reporting_currency": {
+      "type": "string",
+      "title": "Reporting Currency"
+     },
+     "counts": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Counts"
+     },
+     "complete": {
+      "type": "boolean",
+      "title": "Complete"
+     },
+     "unavailable_invoices": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Unavailable Invoices"
+     }
+    },
+    "type": "object",
+    "required": [
+     "reporting_currency",
+     "counts",
+     "complete",
+     "unavailable_invoices"
+    ],
+    "title": "FxCoverage"
+   },
+   "FxEvidenceBlock": {
+    "properties": {
+     "reporting_currency": {
+      "type": "string",
+      "title": "Reporting Currency"
+     },
+     "exact_date": {
+      "type": "boolean",
+      "title": "Exact Date"
+     },
+     "coverage": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Coverage"
+     },
+     "refs": {
+      "items": {
+       "$ref": "#/components/schemas/FxRef"
+      },
+      "type": "array",
+      "title": "Refs"
+     },
+     "sources": {
+      "items": {
+       "$ref": "#/components/schemas/FxLegSource"
+      },
+      "type": "array",
+      "title": "Sources"
+     },
+     "method": {
+      "type": "string",
+      "title": "Method"
+     },
+     "convention_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Convention Note"
+     },
+     "policy_note": {
+      "type": "string",
+      "title": "Policy Note"
+     },
+     "unavailable_invoices": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Unavailable Invoices",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "reporting_currency",
+     "exact_date",
+     "coverage",
+     "refs",
+     "sources",
+     "method",
+     "convention_note",
+     "policy_note"
+    ],
+    "title": "FxEvidenceBlock"
+   },
+   "FxEvidenceSummary": {
+    "properties": {
+     "sources": {
+      "items": {
+       "$ref": "#/components/schemas/FxLegSource"
+      },
+      "type": "array",
+      "title": "Sources"
+     },
+     "coverage": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Coverage"
+     },
+     "observation_date_range": {
+      "anyOf": [
+       {
+        "prefixItems": [
+         {
+          "type": "string",
+          "format": "date"
+         },
+         {
+          "type": "string",
+          "format": "date"
+         }
+        ],
+        "type": "array",
+        "maxItems": 2,
+        "minItems": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Observation Date Range"
+     },
+     "fallback_invoices": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Fallback Invoices"
+     },
+     "max_fallback_days": {
+      "type": "integer",
+      "title": "Max Fallback Days"
+     },
+     "formula": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Formula"
+     },
+     "method": {
+      "type": "string",
+      "title": "Method"
+     },
+     "convention_note": {
+      "type": "string",
+      "title": "Convention Note"
+     },
+     "policy_note": {
+      "type": "string",
+      "title": "Policy Note"
+     }
+    },
+    "type": "object",
+    "required": [
+     "sources",
+     "coverage",
+     "observation_date_range",
+     "fallback_invoices",
+     "max_fallback_days",
+     "formula",
+     "method",
+     "convention_note",
+     "policy_note"
+    ],
+    "title": "FxEvidenceSummary",
+    "description": "Aggregate citation for a consolidated figure; per-invoice detail is available via /ask."
+   },
+   "FxLegSource": {
+    "properties": {
+     "currency": {
+      "type": "string",
+      "title": "Currency"
+     },
+     "series": {
+      "type": "string",
+      "title": "Series"
+     },
+     "url": {
+      "type": "string",
+      "title": "Url"
+     },
+     "page": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Page"
+     },
+     "snapshot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Snapshot Id"
+     },
+     "snapshot_fetched_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Snapshot Fetched At"
+     },
+     "release": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Release"
+     }
+    },
+    "type": "object",
+    "required": [
+     "currency",
+     "series",
+     "url",
+     "snapshot_id",
+     "snapshot_fetched_at",
+     "release"
+    ],
+    "title": "FxLegSource"
+   },
+   "FxRef": {
+    "properties": {
+     "fx_ref_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fx Ref Id"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "from_currency": {
+      "type": "string",
+      "title": "From Currency"
+     },
+     "to_currency": {
+      "type": "string",
+      "title": "To Currency"
+     },
+     "requested_date": {
+      "type": "string",
+      "title": "Requested Date"
+     },
+     "observation_date": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Observation Date"
+     },
+     "fallback_days": {
+      "type": "integer",
+      "title": "Fallback Days"
+     },
+     "exact_date_requested": {
+      "type": "boolean",
+      "title": "Exact Date Requested"
+     },
+     "legs": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Legs"
+     },
+     "formula": {
+      "type": "string",
+      "title": "Formula"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "missing_evidence": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Missing Evidence",
+      "default": []
+     },
+     "invoice_numbers": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Invoice Numbers",
+      "default": []
+     },
+     "amount": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Amount"
+     },
+     "result": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Result"
+     }
+    },
+    "type": "object",
+    "required": [
+     "fx_ref_id",
+     "status",
+     "from_currency",
+     "to_currency",
+     "requested_date",
+     "observation_date",
+     "fallback_days",
+     "exact_date_requested",
+     "legs",
+     "formula"
+    ],
+    "title": "FxRef"
+   },
+   "FxSeriesStatus": {
+    "properties": {
+     "state": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "unavailable"
+      ],
+      "title": "State"
+     },
+     "source_url": {
+      "type": "string",
+      "title": "Source Url"
+     },
+     "snapshot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Snapshot Id"
+     },
+     "fetched_at": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Fetched At"
+     },
+     "release": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Release"
+     },
+     "last_observation": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Observation"
+     },
+     "last_error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Error"
+     }
+    },
+    "type": "object",
+    "required": [
+     "state",
+     "source_url"
+    ],
+    "title": "FxSeriesStatus"
+   },
+   "FxStatusResponse": {
+    "properties": {
+     "available": {
+      "type": "boolean",
+      "title": "Available"
+     },
+     "refreshing": {
+      "type": "boolean",
+      "title": "Refreshing"
+     },
+     "last_refresh_attempt": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Last Refresh Attempt"
+     },
+     "series": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/FxSeriesStatus"
+      },
+      "type": "object",
+      "title": "Series"
+     },
+     "eur_invoice_coverage": {
+      "$ref": "#/components/schemas/FxCoverage"
+     }
+    },
+    "type": "object",
+    "required": [
+     "available",
+     "refreshing",
+     "last_refresh_attempt",
+     "series",
+     "eur_invoice_coverage"
+    ],
+    "title": "FxStatusResponse"
+   },
+   "GroupBreakdown": {
+    "properties": {
+     "group": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Group"
+     },
+     "totals": {
+      "items": {
+       "$ref": "#/components/schemas/CurrencyTotal"
+      },
+      "type": "array",
+      "title": "Totals"
+     }
+    },
+    "type": "object",
+    "required": [
+     "group",
+     "totals"
+    ],
+    "title": "GroupBreakdown"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "HealthResponse": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "degraded"
+      ],
+      "title": "Status"
+     },
+     "data": {
+      "$ref": "#/components/schemas/DataHealth"
+     },
+     "policy": {
+      "$ref": "#/components/schemas/PolicyHealth"
+     },
+     "fx": {
+      "$ref": "#/components/schemas/ComponentStatus"
+     },
+     "llm": {
+      "$ref": "#/components/schemas/LLMHealth"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "data",
+     "policy",
+     "fx",
+     "llm"
+    ],
+    "title": "HealthResponse"
+   },
+   "KeyFigure": {
+    "properties": {
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "value": {
+      "type": "string",
+      "title": "Value"
+     },
+     "currency": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Currency"
+     }
+    },
+    "type": "object",
+    "required": [
+     "label",
+     "value"
+    ],
+    "title": "KeyFigure"
+   },
+   "LLMHealth": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "unavailable",
+       "not_configured",
+       "error"
+      ],
+      "title": "Status"
+     },
+     "detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Detail"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status"
+    ],
+    "title": "LLMHealth"
+   },
+   "Limitation": {
+    "properties": {
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "message": {
+      "type": "string",
+      "title": "Message"
+     },
+     "affected_invoices": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Affected Invoices",
+      "default": []
+     },
+     "recommendation": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recommendation"
+     }
+    },
+    "type": "object",
+    "required": [
+     "kind",
+     "message"
+    ],
+    "title": "Limitation"
+   },
+   "MissingRate": {
+    "properties": {
+     "invoice_number": {
+      "type": "string",
+      "title": "Invoice Number"
+     },
+     "invoice_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Invoice Date"
+     },
+     "currency": {
+      "type": "string",
+      "title": "Currency"
+     },
+     "amount": {
+      "type": "string",
+      "title": "Amount"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "missing_evidence": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Missing Evidence"
+     }
+    },
+    "type": "object",
+    "required": [
+     "invoice_number",
+     "invoice_date",
+     "currency",
+     "amount",
+     "reason",
+     "missing_evidence"
+    ],
+    "title": "MissingRate"
+   },
+   "PolicyEvidence": {
+    "properties": {
+     "clause_id": {
+      "type": "string",
+      "title": "Clause Id"
+     },
+     "section": {
+      "type": "string",
+      "title": "Section"
+     },
+     "kind": {
+      "type": "string",
+      "title": "Kind"
+     },
+     "quote": {
+      "type": "string",
+      "title": "Quote"
+     },
+     "clause_text": {
+      "type": "string",
+      "title": "Clause Text"
+     },
+     "table_header": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Table Header"
+     },
+     "document": {
+      "type": "string",
+      "title": "Document"
+     }
+    },
+    "type": "object",
+    "required": [
+     "clause_id",
+     "section",
+     "kind",
+     "quote",
+     "clause_text",
+     "document"
+    ],
+    "title": "PolicyEvidence"
+   },
+   "PolicyHealth": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "enum": [
+       "ok",
+       "unavailable",
+       "not_configured",
+       "error"
+      ],
+      "title": "Status"
+     },
+     "detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Detail"
+     },
+     "document": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Document"
+     },
+     "clause_count": {
+      "type": "integer",
+      "title": "Clause Count",
+      "default": 0
+     },
+     "sha256": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Sha256"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status"
+    ],
+    "title": "PolicyHealth"
+   },
+   "ResultTable": {
+    "properties": {
+     "columns": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Columns"
+     },
+     "rows": {
+      "items": {
+       "items": {},
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Rows"
+     },
+     "money_columns": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Money Columns",
+      "default": {}
+     },
+     "row_count": {
+      "type": "integer",
+      "title": "Row Count"
+     },
+     "truncated": {
+      "type": "boolean",
+      "title": "Truncated",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "columns",
+     "rows",
+     "row_count"
+    ],
+    "title": "ResultTable"
+   },
+   "RouteInfo": {
+    "properties": {
+     "in_scope": {
+      "type": "boolean",
+      "title": "In Scope"
+     },
+     "sources": {
+      "items": {
+       "type": "string",
+       "enum": [
+        "policy",
+        "records",
+        "fx"
+       ]
+      },
+      "type": "array",
+      "title": "Sources"
+     },
+     "intent": {
+      "type": "string",
+      "title": "Intent"
+     },
+     "reporting_currency": {
+      "type": "string",
+      "title": "Reporting Currency"
+     },
+     "original_currency_filter": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Original Currency Filter"
+     },
+     "exact_date_fx": {
+      "type": "boolean",
+      "title": "Exact Date Fx"
+     },
+     "policy_topics": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Policy Topics"
+     },
+     "rationale": {
+      "type": "string",
+      "title": "Rationale"
+     },
+     "rules_applied": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Rules Applied"
+     }
+    },
+    "type": "object",
+    "required": [
+     "in_scope",
+     "sources",
+     "intent",
+     "reporting_currency",
+     "original_currency_filter",
+     "exact_date_fx",
+     "policy_topics",
+     "rationale",
+     "rules_applied"
+    ],
+    "title": "RouteInfo"
+   },
+   "StatusBreakdown": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "vendor_count": {
+      "type": "integer",
+      "title": "Vendor Count"
+     },
+     "invoice_count": {
+      "type": "integer",
+      "title": "Invoice Count"
+     },
+     "original_currency_totals": {
+      "items": {
+       "$ref": "#/components/schemas/CurrencyTotal"
+      },
+      "type": "array",
+      "title": "Original Currency Totals"
+     },
+     "eur_total": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Eur Total"
+     },
+     "eur_available": {
+      "type": "boolean",
+      "title": "Eur Available"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "vendor_count",
+     "invoice_count",
+     "original_currency_totals",
+     "eur_total",
+     "eur_available"
+    ],
+    "title": "StatusBreakdown"
+   },
+   "SummaryResponse": {
+    "properties": {
+     "generated_at": {
+      "type": "string",
+      "title": "Generated At"
+     },
+     "dataset": {
+      "$ref": "#/components/schemas/DatasetInfo"
+     },
+     "original_currency_totals": {
+      "items": {
+       "$ref": "#/components/schemas/CurrencyTotal"
+      },
+      "type": "array",
+      "title": "Original Currency Totals"
+     },
+     "consolidated": {
+      "$ref": "#/components/schemas/Consolidated"
+     },
+     "by_vendor_status": {
+      "items": {
+       "$ref": "#/components/schemas/StatusBreakdown"
+      },
+      "type": "array",
+      "title": "By Vendor Status"
+     },
+     "top_vendors_eur": {
+      "anyOf": [
+       {
+        "items": {
+         "$ref": "#/components/schemas/VendorSpend"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Top Vendors Eur"
+     },
+     "top_vendors_unavailable_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Top Vendors Unavailable Reason"
+     },
+     "data_quality": {
+      "items": {
+       "$ref": "#/components/schemas/DataQualityItem"
+      },
+      "type": "array",
+      "title": "Data Quality"
+     },
+     "fx_status": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/FxSeriesStatus"
+      },
+      "type": "object",
+      "title": "Fx Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "generated_at",
+     "dataset",
+     "original_currency_totals",
+     "consolidated",
+     "by_vendor_status",
+     "top_vendors_eur",
+     "data_quality",
+     "fx_status"
+    ],
+    "title": "SummaryResponse"
+   },
+   "SupportingRows": {
+    "properties": {
+     "columns": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Columns"
+     },
+     "rows": {
+      "items": {
+       "items": {},
+       "type": "array"
+      },
+      "type": "array",
+      "title": "Rows"
+     },
+     "total_count": {
+      "type": "integer",
+      "title": "Total Count"
+     },
+     "truncated": {
+      "type": "boolean",
+      "title": "Truncated",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "columns",
+     "rows",
+     "total_count"
+    ],
+    "title": "SupportingRows"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   },
+   "VendorSpend": {
+    "properties": {
+     "rank": {
+      "type": "integer",
+      "title": "Rank"
+     },
+     "vendor_id": {
+      "type": "string",
+      "title": "Vendor Id"
+     },
+     "vendor_name": {
+      "type": "string",
+      "title": "Vendor Name"
+     },
+     "country": {
+      "type": "string",
+      "title": "Country"
+     },
+     "category": {
+      "type": "string",
+      "title": "Category"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "eur_total": {
+      "type": "string",
+      "title": "Eur Total"
+     },
+     "invoice_count": {
+      "type": "integer",
+      "title": "Invoice Count"
+     },
+     "original_currency_totals": {
+      "items": {
+       "$ref": "#/components/schemas/CurrencyTotal"
+      },
+      "type": "array",
+      "title": "Original Currency Totals"
+     }
+    },
+    "type": "object",
+    "required": [
+     "rank",
+     "vendor_id",
+     "vendor_name",
+     "country",
+     "category",
+     "status",
+     "eur_total",
+     "invoice_count",
+     "original_currency_totals"
+    ],
+    "title": "VendorSpend"
+   }
+  }
+ }
+}

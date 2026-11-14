@@ -1,0 +1,23 @@
+# Secrets: the OpenAI key lives here. Never commit.
+.env
+
+# Local toolchains and environments (recreated from the README)
+.tools/
+.venv/
+node_modules/
+
+# Runtime state: rate caches, traces (contain questions and model output), eval reports
+var/
+
+# Build output and caches
+dist/
+*.tsbuildinfo
+__pycache__/
+.pytest_cache/
+
+# Machine-specific files
+.DS_Store
+.claude/
+
+# Duplicate of data/ (includes macOS __MACOSX metadata)
+data.zip
